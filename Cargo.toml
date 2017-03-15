@@ -12,4 +12,4 @@ documentation = "https://docs.rs/etag/"
 readme = "README.md"
 
 [badges]
-appveyor = { repository = "https://github.com/DoumanAsh/clipboard-win", branch = "master", service = "github" }
+appveyor = { repository = "https://github.com/DoumanAsh/etag-rs", branch = "master", service = "github" }
