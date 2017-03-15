@@ -1,8 +1,9 @@
 etag-rs
 ====================
 
+[![Build Status](https://travis-ci.org/DoumanAsh/etag-rs.svg?branch=master)](https://travis-ci.org/DoumanAsh/etag-rs)
 [![Crates.io](https://img.shields.io/crates/v/etag.svg)](https://crates.io/crates/etag)
-[![Docs.rs](https://docs.rs/etag)](https://docs.rs/etag)
+[![Docs.rs](https://docs.rs/etag/badge.svg)](https://docs.rs/etag)
 
 ETag Trait implementation for various types.
 
