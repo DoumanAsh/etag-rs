@@ -1,15 +1,12 @@
 [package]
 name = "etag"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Douman <douman@gmx.se>"]
 description = "Simple ETag calculation implementation"
 license = "MIT"
-keywords = ["etag"]
+keywords = ["http", "etag"]
 
 repository = "https://github.com/DoumanAsh/etag-rs"
 documentation = "https://docs.rs/etag/"
 
 readme = "README.md"
-
-[badges]
-appveyor = { repository = "https://github.com/DoumanAsh/etag-rs", branch = "master", service = "github" }

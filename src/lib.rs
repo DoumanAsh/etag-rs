@@ -25,6 +25,7 @@ use std::collections::hash_map::DefaultHasher;
 
 ///Trait that provides calculation of ETag field for type.
 pub trait Etag {
+    ///Calculates ETag value.
     fn etag(&self) -> String;
 }
 
@@ -35,10 +36,10 @@ impl Etag for fs::Metadata {
     fn etag(&self) -> String {
         if let Ok(modified) = self.modified() {
             let modified = modified.duration_since(time::UNIX_EPOCH).expect("Modified is earlier than time::UNIX_EPOCH!");
-            format!("\"{}.{}-{}\"", modified.as_secs(), modified.subsec_nanos(), self.len())
+            format!("{}.{}-{}", modified.as_secs(), modified.subsec_nanos(), self.len())
         }
         else {
-            format!("\"{}\"", self.len())
+            format!("{}", self.len())
         }
     }
 }
@@ -51,7 +52,7 @@ macro_rules! impl_with_hasher
                 fn etag(&self) -> String {
                     let mut hasher = DefaultHasher::new();
                     self.hash(&mut hasher);
-                    format!("\"{}-{}\"", self.len(), hasher.finish())
+                    format!("{}-{}", self.len(), hasher.finish())
                 }
             }
         )+
