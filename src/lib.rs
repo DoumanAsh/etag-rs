@@ -34,12 +34,9 @@ impl Etag for fs::Metadata {
     ///
     ///Note that if modified is not available then it is omitted.
     fn etag(&self) -> String {
-        if let Ok(modified) = self.modified() {
-            let modified = modified.duration_since(time::UNIX_EPOCH).expect("Modified is earlier than time::UNIX_EPOCH!");
-            format!("{}.{}-{}", modified.as_secs(), modified.subsec_nanos(), self.len())
-        }
-        else {
-            format!("{}", self.len())
+        match self.modified().map(|modified| modified.duration_since(time::UNIX_EPOCH).expect("Modified is earlier than time::UNIX_EPOCH!")) {
+            Ok(modified) => format!("{}.{}-{}", modified.as_secs(), modified.subsec_nanos(), self.len()),
+            _ => format!("{}", self.len())
         }
     }
 }
@@ -50,7 +47,7 @@ macro_rules! impl_with_hasher
         $(
             impl Etag for $t {
                 fn etag(&self) -> String {
-                    let mut hasher = DefaultHasher::new();
+                    let mut hasher = DefaultHasher::default();
                     self.hash(&mut hasher);
                     format!("{}-{}", self.len(), hasher.finish())
                 }
