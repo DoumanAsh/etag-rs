@@ -1,5 +1,20 @@
 //! Simple EntityTag implementation.
 //!
+//! # Usage
+//!
+//! ```rust
+//! extern crate etag;
+//!
+//! use etag::EntityTag;
+//!
+//! fn main() {
+//!     let my_tag = EntityTag::strong("lolka".to_owned());
+//!     let text_etag = my_tag.to_string();
+//!     let parse_tag = text_etag.parse::<EntityTag>().unwrap();
+//!
+//!     assert!(my_tag.strong_eq(&parse_tag));
+//! }
+//! ```
 use std::fs;
 use std::fmt;
 use std::time;
@@ -80,6 +95,10 @@ impl EntityTag {
     }
 
     /// Creates weak EntityTag from file metadata using modified time and len.
+    ///
+    /// ## Format:
+    ///
+    /// `[modified-]<len>`
     pub fn from_file_meta(metadata: &fs::Metadata) -> Self {
         let tag = match metadata.modified().map(|modified| modified.duration_since(time::UNIX_EPOCH).expect("Modified is earlier than time::UNIX_EPOCH!")) {
             Ok(modified) => format!("{}.{}-{}", modified.as_secs(), modified.subsec_nanos(), metadata.len()),
@@ -93,6 +112,10 @@ impl EntityTag {
     }
 
     /// Creates strong EntityTag by hashing provided bytes.
+    ///
+    /// ## Format:
+    ///
+    /// `<len>-<hash>`
     pub fn from_hash(bytes: &[u8]) -> Self {
         let mut hasher = DefaultHasher::default();
         bytes.hash(&mut hasher);

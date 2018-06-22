@@ -5,19 +5,20 @@ etag-rs
 [![Crates.io](https://img.shields.io/crates/v/etag.svg)](https://crates.io/crates/etag)
 [![Docs.rs](https://docs.rs/etag/badge.svg)](https://docs.rs/etag)
 
-ETag Trait implementation for various types.
+Simple EntityTag implementation.
 
-For file's Metadata it uses following format `<modified>-<size>`
+# Usage
 
-For other types it uses `<len>-<hash>` that relies on `std::hash::Hash` and `DefaultHasher` of HashMap.
-
-## Usage
 ```rust
 extern crate etag;
 
-use etag::Etag;
+use etag::EntityTag;
 
 fn main() {
-    println!("ETag for string={}", "string".etag());
+    let my_tag = EntityTag::strong("lolka".to_owned());
+    let text_etag = my_tag.to_string();
+    let parse_tag = text_etag.parse::<EntityTag>().unwrap();
+
+    assert!(my_tag.strong_eq(&parse_tag));
 }
 ```
