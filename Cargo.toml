@@ -1,6 +1,6 @@
 [package]
 name = "etag"
-version = "0.2.0"
+version = "1.0.0"
 authors = ["Douman <douman@gmx.se>"]
 description = "Simple ETag calculation implementation"
 license = "MIT"
