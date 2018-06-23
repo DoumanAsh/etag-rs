@@ -134,6 +134,7 @@ impl EntityTag {
 
     /// Set the tag.
     pub fn set_tag(&mut self, tag: String) {
+        assert!(tag.is_ascii());
         self.tag = tag
     }
 
