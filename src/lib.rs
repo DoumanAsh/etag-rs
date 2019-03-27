@@ -80,7 +80,7 @@ impl EntityTag {
     /// As tag characters must be in ASCII assert
     /// is included to check for it.
     pub fn new(weak: bool, tag: String) -> Self {
-        assert!(tag.is_ascii());
+        debug_assert!(tag.is_ascii());
         EntityTag { weak, tag }
     }
 
@@ -134,7 +134,7 @@ impl EntityTag {
 
     /// Set the tag.
     pub fn set_tag(&mut self, tag: String) {
-        assert!(tag.is_ascii());
+        debug_assert!(tag.is_ascii());
         self.tag = tag
     }
 
