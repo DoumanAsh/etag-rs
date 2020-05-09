@@ -1,4 +1,8 @@
-//! Simple EntityTag implementation.
+//! Simple EntityTag implementation, `no_std` friendly.
+//!
+//! # Features
+//!
+//! - `std` - Add `EntityTag::from_file_meta` in order to generate ETag using file's metadata.
 //!
 //! # Usage
 //!
@@ -8,22 +12,25 @@
 //! use etag::EntityTag;
 //!
 //! fn main() {
-//!     let my_tag = EntityTag::strong("lolka".to_owned());
+//!     let my_tag = EntityTag::strong("lolka");
 //!     let text_etag = my_tag.to_string();
 //!     let parse_tag = text_etag.parse::<EntityTag>().unwrap();
 //!
 //!     assert!(my_tag.strong_eq(&parse_tag));
 //! }
 //! ```
-use std::fs;
-use std::fmt;
-use std::time;
-use std::error;
-use std::hash::{
-    Hash,
-    Hasher
-};
-use std::collections::hash_map::DefaultHasher;
+
+#![no_std]
+
+#[cfg(feature = "std")]
+extern crate std;
+
+use core::fmt::{self, Write};
+
+const SEED: u64 = 0x1000;
+
+mod buffer;
+use buffer::Buffer;
 
 /// An entity tag, defined in [RFC7232](https://tools.ietf.org/html/rfc7232#section-2.3)
 ///
@@ -38,6 +45,10 @@ use std::collections::hash_map::DefaultHasher;
 /// comparison of them allows to quickly determine whether two representations of a resource are the
 /// same, but they might also be set to persist indefinitely by a tracking server.
 ///
+/// # Size limit
+///
+/// In order to avoid allocation, ETag size is limited to 64 characters, which should be sufficient
+/// for any hashing mechanism.
 ///
 /// # Format `W/"<etag_value>"`
 ///
@@ -71,38 +82,74 @@ pub struct EntityTag {
     /// Weakness indicator for the tag
     pub weak: bool,
     /// The opaque string in between the DQUOTEs
-    tag: String,
+    tag: Buffer,
 }
 
 impl EntityTag {
-    /// Constructs a new EntityTag.
-    ///
-    /// As tag characters must be in ASCII assert
-    /// is included to check for it.
-    pub fn new(weak: bool, tag: String) -> Self {
+    /// Constructs a new EntityTag, asserting that it doesn't overflow and valid ASCII string.
+    pub fn new(weak: bool, tag: &str) -> Self {
+        let mut result = Self {
+            weak,
+            tag: Buffer::new(),
+        };
+
+        debug_assert!(result.tag.write_bytes(tag.as_bytes()));
         debug_assert!(tag.is_ascii());
-        EntityTag { weak, tag }
+        result
     }
 
-    /// Constructs a new weak EntityTag.
-    pub fn weak(tag: String) -> Self {
+    #[inline]
+    /// Constructs a new weak EntityTag, using the same checks as `new`.
+    pub fn weak(tag: &str) -> Self {
         Self::new(true, tag)
     }
 
-    /// Constructs a new strong EntityTag.
-    pub fn strong(tag: String) -> Self {
+    #[inline]
+    /// Constructs a new strong EntityTag, using the same checks as `new`.
+    pub fn strong(tag: &str) -> Self {
         Self::new(false, tag)
     }
 
+    /// Constructs a new EntityTag, verifying it's size and whether it includes ASCII.
+    pub fn checked_new(weak: bool, tag: &str) -> Result<Self, ParseError> {
+        if tag.is_ascii() {
+            let mut result = Self {
+                weak,
+                tag: Buffer::new(),
+            };
+
+            match result.tag.write_bytes(tag.as_bytes()) {
+                true => Ok(result),
+                false => Err(ParseError::Overflow)
+            }
+        } else {
+            Err(ParseError::NotAscii)
+        }
+    }
+
+    #[inline]
+    /// Constructs a new weak EntityTag, using the same checks as `checked_new`.
+    pub fn checked_weak(tag: &str) -> Result<Self, ParseError> {
+        Self::checked_new(true, tag)
+    }
+
+    #[inline]
+    /// Constructs a new strong EntityTag, using the same checks as `checked_new`.
+    pub fn checked_strong(tag: &str) -> Result<Self, ParseError> {
+        Self::checked_new(false, tag)
+    }
+
+    #[cfg(feature = "std")]
     /// Creates weak EntityTag from file metadata using modified time and len.
     ///
     /// ## Format:
     ///
     /// `[modified-]<len>`
-    pub fn from_file_meta(metadata: &fs::Metadata) -> Self {
-        let tag = match metadata.modified().map(|modified| modified.duration_since(time::UNIX_EPOCH).expect("Modified is earlier than time::UNIX_EPOCH!")) {
-            Ok(modified) => format!("{}.{}-{}", modified.as_secs(), modified.subsec_nanos(), metadata.len()),
-            _ => format!("{}", metadata.len())
+    pub fn from_file_meta(metadata: &std::fs::Metadata) -> Self {
+        let mut tag = Buffer::new();
+        let _ = match metadata.modified().map(|modified| modified.duration_since(std::time::UNIX_EPOCH).expect("Modified is earlier than time::UNIX_EPOCH!")) {
+            Ok(modified) => write!(tag, "{}.{}-{}", modified.as_secs(), modified.subsec_nanos(), metadata.len()),
+            _ => write!(tag, "{}", metadata.len())
         };
 
         Self {
@@ -117,9 +164,9 @@ impl EntityTag {
     ///
     /// `<len>-<hash>`
     pub fn from_hash(bytes: &[u8]) -> Self {
-        let mut hasher = DefaultHasher::default();
-        bytes.hash(&mut hasher);
-        let tag = format!("{}-{}", bytes.len(), hasher.finish());
+        let hash = wy::def_hash(bytes, SEED);
+        let mut tag = Buffer::new();
+        let _ = write!(tag, "{}-{}", bytes.len(), hash);
 
         Self {
             weak: false,
@@ -129,26 +176,20 @@ impl EntityTag {
 
     /// Get the tag.
     pub fn tag(&self) -> &str {
-        self.tag.as_ref()
-    }
-
-    /// Set the tag.
-    pub fn set_tag(&mut self, tag: String) {
-        debug_assert!(tag.is_ascii());
-        self.tag = tag
+        self.tag.as_str()
     }
 
     /// For strong comparison two entity-tags are equivalent if both are not
     /// weak and their opaque-tags match character-by-character.
     pub fn strong_eq(&self, other: &EntityTag) -> bool {
-        !self.weak && !other.weak && self.tag == other.tag
+        !self.weak && !other.weak && self.tag.as_str() == other.tag.as_str()
     }
 
     /// For weak comparison two entity-tags are equivalent if their
     /// opaque-tags match character-by-character, regardless of either or
     /// both being tagged as "weak".
     pub fn weak_eq(&self, other: &EntityTag) -> bool {
-        self.tag == other.tag
+        self.tag.as_str() == other.tag.as_str()
     }
 
     /// The inverse of `EntityTag.strong_eq()`.
@@ -164,41 +205,38 @@ impl EntityTag {
 
 impl fmt::Display for EntityTag {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.weak {
-            true => write!(f, "W/\"{}\"", self.tag),
-            false => write!(f, "\"{}\"", self.tag),
+        if self.weak {
+            f.write_str("W/")?;
         }
+
+        f.write_char('"')?;
+        f.write_str(self.tag.as_str())?;
+        f.write_char('"')
     }
 }
 
 ///Describes possible errors for EntityTag
-#[derive(Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum ParseError {
     ///Format of EntityTag is invalid
     InvalidFormat,
     ///Tag contains non-ASCII characters
-    NotAscii
+    NotAscii,
+    ///Tag doesn't fit buffer.
+    Overflow,
 }
 
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ParseError::InvalidFormat => write!(f, "EntityTag uses invalid format"),
-            ParseError::NotAscii => write!(f, "EntityTag uses non-ASCII characters")
+            ParseError::InvalidFormat => f.write_str("EntityTag uses invalid format"),
+            ParseError::NotAscii => f.write_str("EntityTag uses non-ASCII characters"),
+            ParseError::Overflow => f.write_str("EntityTag size overflows buffer"),
         }
     }
 }
 
-impl error::Error for ParseError {
-    fn description(&self) -> &str {
-        match self {
-            ParseError::InvalidFormat => "EntityTag uses invalid format",
-            ParseError::NotAscii => "EntityTag uses non-ASCII characters"
-        }
-    }
-}
-
-impl std::str::FromStr for EntityTag {
+impl core::str::FromStr for EntityTag {
     type Err = ParseError;
 
     fn from_str(text: &str) -> Result<EntityTag, ParseError> {
@@ -211,16 +249,10 @@ impl std::str::FromStr for EntityTag {
 
         if slice.starts_with('"') {
             let slice = &slice[1..len-1];
-            match slice.is_ascii() {
-                true => Ok(EntityTag::strong(slice.to_string())),
-                false => Err(ParseError::NotAscii)
-            }
+            EntityTag::checked_strong(slice)
         } else if len >= 4 && slice.starts_with("W/\"") {
             let slice = &slice[3..len-1];
-            match slice.is_ascii() {
-                true => Ok(EntityTag::weak(slice.to_string())),
-                false => Err(ParseError::NotAscii)
-            }
+            EntityTag::checked_weak(slice)
         } else {
             Err(ParseError::InvalidFormat)
         }

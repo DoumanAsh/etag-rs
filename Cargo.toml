@@ -1,12 +1,20 @@
 [package]
 name = "etag"
-version = "1.0.3"
+version = "2.0.0"
 authors = ["Douman <douman@gmx.se>"]
 description = "Simple ETag calculation implementation"
-license = "MIT"
+license = "BSL-1.0"
 keywords = ["http", "etag"]
+categories = ["no-std"]
+edition = "2018"
 
 repository = "https://github.com/DoumanAsh/etag-rs"
 documentation = "https://docs.rs/etag/"
 
 readme = "README.md"
+
+[dependencies]
+wy = "1"
+
+[features]
+std = []
