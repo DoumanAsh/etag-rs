@@ -18,3 +18,6 @@ wy = "1"
 
 [features]
 std = []
+
+[package.metadata.docs.rs]
+features = ["std"]
