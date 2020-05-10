@@ -77,11 +77,7 @@ impl fmt::Debug for Buffer {
 
 impl cmp::PartialEq for Buffer {
     fn eq(&self, other: &Buffer) -> bool {
-        if self.len != other.len {
-            return false;
-        } else {
-            self.as_slice() == other.as_slice()
-        }
+        self.len == other.len && self.as_slice() == other.as_slice()
     }
 }
 

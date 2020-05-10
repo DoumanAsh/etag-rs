@@ -7,8 +7,6 @@
 //! # Usage
 //!
 //! ```rust
-//! extern crate etag;
-//!
 //! use etag::EntityTag;
 //!
 //! fn main() {
@@ -87,6 +85,8 @@ pub struct EntityTag {
 
 impl EntityTag {
     /// Constructs a new EntityTag, asserting that it doesn't overflow and valid ASCII string.
+    ///
+    /// Assertions are performed in debug mode only.
     pub fn new(weak: bool, tag: &str) -> Self {
         let mut result = Self {
             weak,
@@ -140,6 +140,7 @@ impl EntityTag {
     }
 
     #[cfg(feature = "std")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     /// Creates weak EntityTag from file metadata using modified time and len.
     ///
     /// ## Format:

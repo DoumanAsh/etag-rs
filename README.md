@@ -14,8 +14,6 @@ Simple EntityTag implementation.
 # Usage
 
 ```rust
-extern crate etag;
-
 use etag::EntityTag;
 
 fn main() {
