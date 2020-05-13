@@ -19,6 +19,7 @@
 //! ```
 
 #![no_std]
+#![deny(warnings)]
 
 #[cfg(feature = "std")]
 extern crate std;

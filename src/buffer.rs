@@ -1,4 +1,4 @@
-use core::{cmp, ptr, fmt, mem};
+use core::{cmp, ptr, fmt};
 
 pub const MAX_SIZE: usize = 64;
 
