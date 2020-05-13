@@ -91,15 +91,4 @@ impl fmt::Write for Buffer {
             false => Err(fmt::Error::default())
         }
     }
-
-    fn write_char(&mut self, c: char) -> fmt::Result {
-        let c: [u8; 4] = unsafe {
-            mem::transmute(c)
-        };
-
-        match self.write_bytes(&c) {
-            true => Ok(()),
-            false => Err(fmt::Error::default())
-        }
-    }
 }
