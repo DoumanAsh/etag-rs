@@ -141,7 +141,6 @@ impl EntityTag {
     }
 
     #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     /// Creates weak EntityTag from file metadata using modified time and len.
     ///
     /// ## Format:
