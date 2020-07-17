@@ -28,8 +28,7 @@ use core::fmt::{self, Write};
 
 const SEED: u64 = 0x1000;
 
-mod buffer;
-use buffer::Buffer;
+type Buffer = str_buf::StrBuf::<[u8; 64]>;
 
 /// An entity tag, defined in [RFC7232](https://tools.ietf.org/html/rfc7232#section-2.3)
 ///
@@ -94,8 +93,8 @@ impl EntityTag {
             tag: Buffer::new(),
         };
 
-        debug_assert!(result.tag.write_bytes(tag.as_bytes()));
         debug_assert!(tag.is_ascii());
+        debug_assert_eq!(result.tag.push_str(tag), tag.len());
         result
     }
 
@@ -119,7 +118,7 @@ impl EntityTag {
                 tag: Buffer::new(),
             };
 
-            match result.tag.write_bytes(tag.as_bytes()) {
+            match result.tag.push_str(tag) == tag.len() {
                 true => Ok(result),
                 false => Err(ParseError::Overflow)
             }
