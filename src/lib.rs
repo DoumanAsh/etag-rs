@@ -94,7 +94,8 @@ impl EntityTag {
         };
 
         debug_assert!(tag.is_ascii());
-        debug_assert_eq!(result.tag.push_str(tag), tag.len());
+        let written = result.tag.push_str(tag);
+        debug_assert_eq!(written, tag.len());
         result
     }
 
