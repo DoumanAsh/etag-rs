@@ -28,7 +28,7 @@ use core::fmt::{self, Write};
 
 const SEED: u64 = 0x1000;
 
-type Buffer = str_buf::StrBuf::<[u8; 64]>;
+type Buffer = str_buf::StrBuf::<64>;
 
 /// An entity tag, defined in [RFC7232](https://tools.ietf.org/html/rfc7232#section-2.3)
 ///

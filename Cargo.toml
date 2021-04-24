@@ -1,6 +1,6 @@
 [package]
 name = "etag"
-version = "2.0.5"
+version = "2.0.6"
 authors = ["Douman <douman@gmx.se>"]
 description = "Simple ETag calculation implementation"
 license = "BSL-1.0"
@@ -15,7 +15,7 @@ readme = "README.md"
 
 [dependencies]
 wy = "1"
-str-buf = "1"
+str-buf = "2"
 
 [features]
 std = []
