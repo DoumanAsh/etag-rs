@@ -24,11 +24,10 @@
 #[cfg(feature = "std")]
 extern crate std;
 
+use core::mem;
 use core::fmt::{self, Write};
 
-const SEED: u64 = 0x1000;
-
-type Buffer = str_buf::StrBuf::<64>;
+type Buffer = str_buf::StrBuf::<62>;
 
 /// An entity tag, defined in [RFC7232](https://tools.ietf.org/html/rfc7232#section-2.3)
 ///
@@ -45,7 +44,7 @@ type Buffer = str_buf::StrBuf::<64>;
 ///
 /// # Size limit
 ///
-/// In order to avoid allocation, ETag size is limited to 64 characters, which should be sufficient
+/// In order to avoid allocation, ETag size is limited to 62 characters, which should be sufficient
 /// for any hashing mechanism.
 ///
 /// # Format `W/"<etag_value>"`
@@ -164,8 +163,74 @@ impl EntityTag {
     /// ## Format:
     ///
     /// `<len>-<hash>`
-    pub fn from_hash(bytes: &[u8]) -> Self {
-        let hash = wy::def_hash(bytes, SEED);
+    pub const fn const_from_data(bytes: &[u8]) -> Self {
+        const SEP: u8 = b'-';
+        let mut bytes_len = bytes.len() as u64;
+        let mut hash = xxhash_rust::const_xxh3::xxh3_128(bytes);
+
+        let mut storage_len = 0;
+        let mut storage = [mem::MaybeUninit::<u8>::uninit(); 62];
+        while bytes_len > 9 {
+            let digit = bytes_len % 10;
+            bytes_len = bytes_len / 10;
+            storage[storage_len] = mem::MaybeUninit::new(b'0' + digit as u8);
+
+            storage_len += 1;
+        }
+
+        storage[storage_len] = mem::MaybeUninit::new(b'0' + (bytes_len % 10) as u8);
+        storage_len += 1;
+
+        let mut idx = 0;
+        let mut storage_end = storage_len - 1;
+        while idx < storage_end {
+            let temp = storage[idx];
+            storage[idx] = storage[storage_end];
+            storage[storage_end] = temp;
+            idx += 1;
+            storage_end -= 1;
+        }
+
+        storage[storage_len] = mem::MaybeUninit::new(SEP);
+        storage_len += 1;
+
+        let first_part_cursor = storage_len;
+
+        while hash > 9 {
+            let digit = hash % 10;
+            hash = hash / 10;
+            storage[storage_len] = mem::MaybeUninit::new(b'0' + digit as u8);
+
+            storage_len += 1;
+        }
+        storage[storage_len] = mem::MaybeUninit::new(b'0' + (hash % 10) as u8);
+        storage_len += 1;
+
+        idx = first_part_cursor;
+        storage_end = storage_len - 1;
+        while idx < storage_end {
+            let temp = storage[idx];
+            storage[idx] = storage[storage_end];
+            storage[storage_end] = temp;
+            idx += 1;
+            storage_end -= 1;
+        }
+
+        Self {
+            weak: false,
+            tag: unsafe {
+                Buffer::from_storage(storage, storage_len as u8)
+            }
+        }
+    }
+
+    /// Creates strong EntityTag by hashing provided bytes.
+    ///
+    /// ## Format:
+    ///
+    /// `<len>-<hash>`
+    pub fn from_data(bytes: &[u8]) -> Self {
+        let hash = xxhash_rust::xxh3::xxh3_128(bytes);
         let mut tag = Buffer::new();
         let _ = write!(tag, "{}-{}", bytes.len(), hash);
 
@@ -257,5 +322,21 @@ impl core::str::FromStr for EntityTag {
         } else {
             Err(ParseError::InvalidFormat)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{EntityTag, Buffer};
+
+    #[test]
+    fn assert_buffer_fits() {
+        assert_eq!(core::mem::size_of::<EntityTag>(), 64);
+        let expected = std::format!("{0}.{0}-{0}", u64::max_value());
+        let res = Buffer::from_str_checked(&expected).expect("To fit");
+        assert_eq!(expected.as_str(), res);
+        let expected = std::format!("{0}-{1}", u64::max_value(), u128::max_value());
+        let res = Buffer::from_str_checked(&expected).expect("To fit");
+        assert_eq!(expected.as_str(), res);
     }
 }

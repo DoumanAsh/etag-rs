@@ -20,28 +20,47 @@ fn test_from_file_meta() {
 }
 
 #[test]
-fn test_etag_from_hash() {
+fn test_etag_from_data() {
     const ZERO: &'static [u8] = b"";
     const FIRST: &'static [u8] = b"12";
     const SECOND: &'static [u8] = b"21";
+    const BIG: &'static [u8] = b"123456789123456789123456789";
+    const VERY_BIG: &'static [u8] = b"123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789123456789";
 
-    let zero = EntityTag::from_hash(ZERO);
-    let zero_two = EntityTag::from_hash(ZERO);
-    let first = EntityTag::from_hash(FIRST);
-    let first_two = EntityTag::from_hash(FIRST);
-    let second = EntityTag::from_hash(SECOND);
+    let zero = EntityTag::from_data(ZERO);
+    let const_zero = EntityTag::const_from_data(ZERO);
+    let zero_two = EntityTag::from_data(ZERO);
+    let const_zero_two = EntityTag::const_from_data(ZERO);
+    let first = EntityTag::from_data(FIRST);
+    let const_first = EntityTag::const_from_data(FIRST);
+    let first_two = EntityTag::from_data(FIRST);
+    let const_first_two = EntityTag::const_from_data(FIRST);
+    let second = EntityTag::from_data(SECOND);
+    let const_second = EntityTag::const_from_data(SECOND);
 
+    let big = EntityTag::from_data(BIG);
+    let const_big = EntityTag::const_from_data(BIG);
+    let very_big = EntityTag::from_data(VERY_BIG);
+    let const_very_big = EntityTag::const_from_data(VERY_BIG);
+
+    assert_eq!(zero, const_zero);
     assert_eq!(zero, zero_two);
+    assert_eq!(zero_two, const_zero_two);
     assert_eq!(first, first_two);
+    assert_eq!(first, const_first);
     assert_ne!(first, second);
+    assert_eq!(first_two, const_first_two);
+    assert_eq!(second, const_second);
+    assert_eq!(big, const_big);
+    assert_eq!(very_big, const_very_big);
 }
 
 #[test]
 fn test_etag_size_limit() {
-    const MAX: &'static str = "1234567890123456789012345678901234567890123456789012345678901234";
-    const ABOVE_MAX: &'static str = "12345678901234567890123456789012345678901234567890123456789012345";
-    assert_eq!(MAX.len(), 64);
-    assert_eq!(ABOVE_MAX.len(), 65);
+    const MAX: &'static str = "12345678901234567890123456789012345678901234567890123456789012";
+    const ABOVE_MAX: &'static str = "123456789012345678901234567890123456789012345678901234567890123";
+    assert_eq!(MAX.len(), 62);
+    assert_eq!(ABOVE_MAX.len(), 63);
 
     assert_eq!(format!("\"{}\"", MAX).parse::<EntityTag>().unwrap(), EntityTag::checked_strong(MAX).unwrap());
     assert_eq!(format!("\"{}\"", ABOVE_MAX).parse::<EntityTag>().unwrap_err(), etag::ParseError::Overflow);
