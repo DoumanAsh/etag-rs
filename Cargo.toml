@@ -1,6 +1,6 @@
 [package]
 name = "etag"
-version = "3.0.0"
+version = "4.0.0"
 authors = ["Douman <douman@gmx.se>"]
 description = "Simple ETag calculation implementation"
 license = "BSL-1.0"
@@ -14,11 +14,11 @@ documentation = "https://docs.rs/etag/"
 readme = "README.md"
 
 [dependencies.xxhash-rust]
-version = "0.8"
+version = "0.8.6"
 features = ["const_xxh3", "xxh3"]
 
 [dependencies]
-str-buf = "2"
+str-buf = "3"
 
 [features]
 std = []
